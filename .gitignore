@@ -1,0 +1,4 @@
+.cookie
+*/vendor
+/max-concurrent-downloads
+*.out

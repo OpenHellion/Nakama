@@ -1,0 +1,8 @@
+syntax = "proto3";
+option go_package = "src/main";
+
+message DataMessage {
+	string destinationId = 1;
+	string authToken = 2;
+	bytes data = 3;
+}
