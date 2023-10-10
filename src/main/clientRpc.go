@@ -43,8 +43,8 @@ type FindMatchesResponse struct {
 type MatchInfo struct {
 	Id         string
 	Ip         string
-	GamePort   uint
-	StatusPort uint
+	GamePort   int
+	StatusPort int
 }
 
 func ClientFindMatch(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
