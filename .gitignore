@@ -1,4 +1,8 @@
-.cookie
-*/vendor
-/max-concurrent-downloads
-*.out
+/config.yml
+._nakama.exe
+nakama.exe
+*.cookie
+package-lock.json
+/node_modules
+/build
+/data
