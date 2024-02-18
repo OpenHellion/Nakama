@@ -18,6 +18,11 @@ const noMatches: nkruntime.Error = {
 	code: nkruntime.Codes.NOT_FOUND
 }
 
+const noServers: nkruntime.Error = {
+	message: "No registered server could be found on your ip.",
+	code: nkruntime.Codes.NOT_FOUND
+}
+
 const CurrentHash = 2708603976
 const CurrentVersion = "0.6.0"
 
@@ -26,19 +31,45 @@ let InitModule: nkruntime.InitModule =
 	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
 		initializer.registerStorageIndex("MatchesIx", "matches_collection", "", ["location"], 5000, true)
 
-		// Event listeners
-		initializer.registerBeforeCreateGroup(beforeCreateGroup)
+		// Disable a whole bunch of features
+		initializer.registerBeforeCreateGroup(beforeDisabled)
+		initializer.registerBeforeUpdateGroup(beforeDisabled)
+		initializer.registerBeforeJoinTournament(beforeDisabled)
+		initializer.registerBeforeAuthenticateApple(beforeDisabled)
+		initializer.registerBeforeAuthenticateCustom(beforeDisabled)
+		initializer.registerBeforeAuthenticateDevice(beforeDisabled)
+		initializer.registerBeforeAuthenticateEmail(beforeDisabled)
+		initializer.registerBeforeAuthenticateFacebook(beforeDisabled)
+		initializer.registerBeforeAuthenticateFacebookInstantGame(beforeDisabled)
+		initializer.registerBeforeAuthenticateGameCenter(beforeDisabled)
+		initializer.registerBeforeAuthenticateGoogle(beforeDisabled)
+		initializer.registerBeforeImportFacebookFriends(beforeDisabled)
+		initializer.registerBeforeLinkApple(beforeDisabled)
+		initializer.registerBeforeLinkCustom(beforeDisabled)
+		initializer.registerBeforeLinkEmail(beforeDisabled)
+		initializer.registerBeforeLinkDevice(beforeDisabled)
+		initializer.registerBeforeLinkFacebook(beforeDisabled)
+		initializer.registerBeforeLinkFacebookInstantGame(beforeDisabled)
+		initializer.registerBeforeLinkGameCenter(beforeDisabled)
+		initializer.registerBeforeLinkGoogle(beforeDisabled)
+		initializer.registerBeforeListMatches(beforeDisabled)
+		initializer.registerBeforeValidatePurchaseApple(beforeDisabled)
+		initializer.registerBeforeValidatePurchaseGoogle(beforeDisabled)
+		initializer.registerBeforeValidatePurchaseHuawei(beforeDisabled)
+		initializer.registerBeforeValidateSubscriptionApple(beforeDisabled)
+		initializer.registerBeforeWriteLeaderboardRecord(beforeDisabled)
 
 		// Server RPC
 		initializer.registerRpc("register_server", serverRegister)
+		initializer.registerRpc("unregister_server", serverUnregister)
 
 		// Client RPC
 		initializer.registerRpc("client_find_match", clientFindMatch)
 		initializer.registerRpc("client_get_match_info", clientGetMatchInfo)
 	}
 
-let beforeCreateGroup: nkruntime.BeforeHookFunction<any> =
-	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, data: nkruntime.AddFriendsRequest): any {
+let beforeDisabled: nkruntime.BeforeHookFunction<any> =
+	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, data: any): any {
 		logger.error("Tried to use disabled function.")
 		throw errorDisabled;
 	}
@@ -103,6 +134,33 @@ let serverRegister: nkruntime.RpcFunction =
 		}
 
 		return JSON.stringify(registerServerResponse);
+	}
+
+let serverUnregister: nkruntime.RpcFunction =
+	function (ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, payload: string) {
+		logger.debug("Received RPC with payload " + payload)
+
+		if (ctx.userId != null)
+		{
+			logger.error("RPC was called by a user.")
+			throw invalidUserId
+		}
+
+		let message = JSON.parse(payload);
+
+		const servers: nkruntime.StorageObject[] = nk.storageRead([message.ServerId])
+		const result = servers.filter(server => server.value.ip == ctx.clientIp && server.value.gamePort == message.GamePort && server.value.statusPort == message.StatusPort)
+
+		if (result.length == 0)
+		{
+			logger.error("Error proccessing unregister server request; server not found.")
+			throw noServers;
+		}
+		else
+		{
+			nk.storageDelete([message.ServerId])
+			return "success";
+		}
 	}
 
 let clientFindMatch: nkruntime.RpcFunction =
