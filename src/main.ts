@@ -3,7 +3,7 @@ const errorDisabled: nkruntime.Error = {
 	code: nkruntime.Codes.UNIMPLEMENTED
 }
 
-const invalidUserId: nkruntime.Error = {
+const canOnlyBeCalledByServer: nkruntime.Error = {
 	message: "RPC is only callable from server to server.",
 	code: nkruntime.Codes.PERMISSION_DENIED
 }
@@ -23,9 +23,13 @@ const noServers: nkruntime.Error = {
 	code: nkruntime.Codes.NOT_FOUND
 }
 
+const invalidUUID: nkruntime.Error = {
+	message: "UUID was not expected.",
+	code: nkruntime.Codes.PERMISSION_DENIED
+}
+
 const CurrentHash = 2708603976
 const CurrentVersion = "0.6.0"
-
 
 let InitModule: nkruntime.InitModule =
 	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
@@ -38,7 +42,6 @@ let InitModule: nkruntime.InitModule =
 		initializer.registerBeforeAuthenticateApple(beforeDisabled)
 		initializer.registerBeforeAuthenticateCustom(beforeDisabled)
 		initializer.registerBeforeAuthenticateDevice(beforeDisabled)
-		initializer.registerBeforeAuthenticateEmail(beforeDisabled)
 		initializer.registerBeforeAuthenticateFacebook(beforeDisabled)
 		initializer.registerBeforeAuthenticateFacebookInstantGame(beforeDisabled)
 		initializer.registerBeforeAuthenticateGameCenter(beforeDisabled)
@@ -81,7 +84,7 @@ let serverRegister: nkruntime.RpcFunction =
 		if (ctx.userId != null)
 		{
 			logger.error("RPC was called by a user.")
-			throw invalidUserId
+			throw canOnlyBeCalledByServer
 		}
 
 		let message = JSON.parse(payload);
@@ -143,12 +146,18 @@ let serverUnregister: nkruntime.RpcFunction =
 		if (ctx.userId != null)
 		{
 			logger.error("RPC was called by a user.")
-			throw invalidUserId
+			throw canOnlyBeCalledByServer
 		}
 
 		let message = JSON.parse(payload);
 
-		const servers: nkruntime.StorageObject[] = nk.storageRead([message.ServerId])
+		let objectIds: nkruntime.StorageReadRequest = {
+			collection: 'matches_collection',
+			key: message.ServerId,
+			userId: "00000000-0000-0000-0000-000000000000"
+		}
+
+		const servers: nkruntime.StorageObject[] = nk.storageRead([objectIds])
 		const result = servers.filter(server => server.value.ip == ctx.clientIp && server.value.gamePort == message.GamePort && server.value.statusPort == message.StatusPort)
 
 		if (result.length == 0)
