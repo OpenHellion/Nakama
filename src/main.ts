@@ -29,7 +29,7 @@ const invalidUUID: nkruntime.Error = {
 }
 
 const CurrentHash = 2708603976
-const CurrentVersion = "1.0rc1"
+const CurrentVersion = "1.0-rc1"
 
 let InitModule: nkruntime.InitModule =
 	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
