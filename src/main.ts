@@ -33,7 +33,9 @@ const CurrentVersion = "1.0-rc1"
 
 let InitModule: nkruntime.InitModule =
 	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
-		initializer.registerStorageIndex("MatchesIx", "matches_collection", "", ["location"], 5000, true)
+		// Nakama gained a sortableFields parameter before maxEntries; without it the numeric
+		// maxEntries lands in the array position and the runtime refuses to load the module.
+		initializer.registerStorageIndex("MatchesIx", "matches_collection", "", ["location"], [], 5000, true)
 
 		// Disable a whole bunch of features
 		initializer.registerBeforeCreateGroup(beforeDisabled)
@@ -113,7 +115,7 @@ let serverRegister: nkruntime.RpcFunction =
 
 		let matchInfo = {
 			"location": message.Location,
-			"ip": ctx.clientIp,
+			"ip": ctx.env["SERVER_IP_OVERRIDE"] ? ctx.env["SERVER_IP_OVERRIDE"] : ctx.clientIp,
 			"gamePort": message.GamePort,
 			"statusPort": message.StatusPort
 		}
@@ -191,7 +193,8 @@ let clientFindMatch: nkruntime.RpcFunction =
 
 		const joinQuery = "+value.location:" + message.Location // TODO: Sanitize this
 
-		const matches: nkruntime.StorageObject[] = nk.storageIndexList("MatchesIx", joinQuery, 10)
+		// storageIndexList now returns a result wrapper rather than a bare array.
+		const matches: nkruntime.StorageObject[] = nk.storageIndexList("MatchesIx", joinQuery, 10).objects
 
 		if (matches.length == 0)
 		{
