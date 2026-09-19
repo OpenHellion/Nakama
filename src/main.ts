@@ -115,7 +115,7 @@ let serverRegister: nkruntime.RpcFunction =
 
 		let matchInfo = {
 			"location": message.Location,
-			"ip": ctx.env["SERVER_IP_OVERRIDE"] ? ctx.env["SERVER_IP_OVERRIDE"] : ctx.clientIp,
+			"ip": ctx.clientIp,
 			"gamePort": message.GamePort,
 			"statusPort": message.StatusPort
 		}
