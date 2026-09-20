@@ -115,7 +115,7 @@ let serverRegister: nkruntime.RpcFunction =
 
 		let matchInfo = {
 			"location": message.Location,
-			"ip": ctx.clientIp,
+			"ip": ctx.env["SERVER_IP_OVERRIDE"] || ctx.clientIp,
 			"gamePort": message.GamePort,
 			"statusPort": message.StatusPort
 		}
@@ -160,7 +160,7 @@ let serverUnregister: nkruntime.RpcFunction =
 		}
 
 		const servers: nkruntime.StorageObject[] = nk.storageRead([objectIds])
-		const result = servers.filter(server => server.value.ip == ctx.clientIp && server.value.gamePort == message.GamePort && server.value.statusPort == message.StatusPort)
+		const result = servers.filter(server => server.value.ip == ctx.env["SERVER_IP_OVERRIDE"] || ctx.clientIp && server.value.gamePort == message.GamePort && server.value.statusPort == message.StatusPort)
 
 		if (result.length == 0)
 		{

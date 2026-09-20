@@ -4,13 +4,13 @@
   "description": "A plugin for Nakama to make it work with the OpenHellion project.",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve": "npm install typescript && npx tsc && docker compose up"
   },
   "keywords": [],
   "author": "OpenHellion contributors",
   "license": "GPL-3.0",
   "devDependencies": {
-    "typescript": "^5.3.3"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "nakama-runtime": "github:heroiclabs/nakama-common"
