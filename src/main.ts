@@ -8,16 +8,6 @@ const canOnlyBeCalledByServer: nkruntime.Error = {
 	code: nkruntime.Codes.PERMISSION_DENIED
 }
 
-const invalidVersion: nkruntime.Error = {
-	message: "Provided version or hash is incorrect.",
-	code: nkruntime.Codes.PERMISSION_DENIED
-}
-
-const noMatches: nkruntime.Error = {
-	message: "No matches found with criteria.",
-	code: nkruntime.Codes.NOT_FOUND
-}
-
 const noServers: nkruntime.Error = {
 	message: "No registered server could be found on your ip.",
 	code: nkruntime.Codes.NOT_FOUND
@@ -28,15 +18,8 @@ const invalidUUID: nkruntime.Error = {
 	code: nkruntime.Codes.PERMISSION_DENIED
 }
 
-const CurrentHash = 2708603976
-const CurrentVersion = "1.0-rc1"
-
 let InitModule: nkruntime.InitModule =
 	function(ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, initializer: nkruntime.Initializer) {
-		// Nakama gained a sortableFields parameter before maxEntries; without it the numeric
-		// maxEntries lands in the array position and the runtime refuses to load the module.
-		initializer.registerStorageIndex("MatchesIx", "matches_collection", "", ["location"], [], 5000, true)
-
 		// Disable a whole bunch of features
 		initializer.registerBeforeCreateGroup(beforeDisabled)
 		initializer.registerBeforeUpdateGroup(beforeDisabled)
@@ -69,8 +52,7 @@ let InitModule: nkruntime.InitModule =
 		initializer.registerRpc("unregister_server", serverUnregister)
 
 		// Client RPC
-		initializer.registerRpc("client_find_match", clientFindMatch)
-		initializer.registerRpc("client_get_match_info", clientGetMatchInfo)
+		initializer.registerRpc("client_get_matches", clientGetMatches)
 	}
 
 let beforeDisabled: nkruntime.BeforeHookFunction<any> =
@@ -91,11 +73,6 @@ let serverRegister: nkruntime.RpcFunction =
 
 		let message = JSON.parse(payload);
 
-		/*if (message.Hash != CurrentHash) {
-			logger.error("Server registering has invalid hash.")
-			throw invalidVersion;
-		}*/
-
 		// TODO: Cant get this to find the file
 		// Decode whitelist.
 		/*file, err := nk.ReadFile("nakama/data/serverWhitelist.json")
@@ -114,7 +91,6 @@ let serverRegister: nkruntime.RpcFunction =
 		}*/
 
 		let matchInfo = {
-			"location": message.Location,
 			"ip": ctx.env["SERVER_IP_OVERRIDE"] || ctx.clientIp,
 			"gamePort": message.GamePort,
 			"statusPort": message.StatusPort
@@ -174,65 +150,27 @@ let serverUnregister: nkruntime.RpcFunction =
 		}
 	}
 
-let clientFindMatch: nkruntime.RpcFunction =
+let clientGetMatches: nkruntime.RpcFunction =
 	function (ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, payload: string) {
-		logger.debug("Received RPC with payload " + payload)
+		let matches: { id: string, ip: string, gamePort: number, statusPort: number }[] = []
+		let cursor: string | undefined = undefined
 
-		let message = JSON.parse(payload);
+		do {
+			const page = nk.storageList("00000000-0000-0000-0000-000000000000", "matches_collection", 100, cursor)
 
-		if (message.Version != CurrentVersion)
-		{
-			logger.error("Client connecting has invalid version.")
-			throw invalidVersion;
-		}
+			for (const object of page.objects ?? []) {
+				const value = object.value as any
+				matches.push({
+					id: object.key,
+					ip: value.ip,
+					gamePort: value.gamePort,
+					statusPort: value.statusPort
+				})
+			}
 
-		/*if (message.Hash != CurrentHash) {
-			logger.error("Client connecting has invalid hash.")
-			throw invalidVersion;
-		}*/
+			cursor = page.cursor
+		} while (cursor)
 
-		const joinQuery = "+value.location:" + message.Location // TODO: Sanitize this
-
-		// storageIndexList now returns a result wrapper rather than a bare array.
-		const matches: nkruntime.StorageObject[] = nk.storageIndexList("MatchesIx", joinQuery, 10).objects
-
-		if (matches.length == 0)
-		{
-			logger.error("No matches found with query" + joinQuery)
-			throw noMatches;
-		}
-
-		const findMatchesResponse = {
-			MatchesId: matches.map(match => match.key)
-		}
-
-		return JSON.stringify(findMatchesResponse);
+		return JSON.stringify(matches)
 	}
 
-let clientGetMatchInfo: nkruntime.RpcFunction =
-	function (ctx: nkruntime.Context, logger: nkruntime.Logger, nk: nkruntime.Nakama, payload: string) {
-		logger.debug("Received RPC with payload " + payload)
-
-		// TODO: Validate payload (matchId).
-
-		const storageRead: nkruntime.StorageReadRequest = {
-			collection: "matches_collection",
-			key: payload,
-			userId: "00000000-0000-0000-0000-000000000000"
-		}
-
-		const results = nk.storageRead([storageRead])
-
-		if (results.length == 0)
-		{
-			logger.error("Found no matches with id " + payload)
-			throw noMatches;
-		}
-
-		if (results.length > 1)
-		{
-			logger.warn("Found several matches with id " + payload)
-		}
-
-		return JSON.stringify(results[0].value);
-	}
