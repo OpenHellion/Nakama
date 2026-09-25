@@ -73,23 +73,6 @@ let serverRegister: nkruntime.RpcFunction =
 
 		let message = JSON.parse(payload);
 
-		// TODO: Cant get this to find the file
-		// Decode whitelist.
-		/*file, err := nk.ReadFile("nakama/data/serverWhitelist.json")
-		if err != nil {
-			return "", runtime.NewError("Main server could not read whitelist file.", NOT_FOUND)
-		}
-
-		result := map[string]interface{}{}
-		json.NewDecoder(file).Decode(&result)
-
-		defer file.Close()
-
-		// Check if server is whitelisted.
-		if _, isMapContainsKey := result[message.AuthToken]; !isMapContainsKey {
-			return "", runtime.NewError("Server is not whitelisted.", PERMISSION_DENIED)
-		}*/
-
 		let matchInfo = {
 			"ip": ctx.env["SERVER_IP_OVERRIDE"] || ctx.clientIp,
 			"gamePort": message.GamePort,
